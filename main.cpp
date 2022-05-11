@@ -12,6 +12,48 @@
 
 using namespace std;
 
+enum chunkType {
+    IHDR, IEND, IDAT, PLTE, bKGD, UNKNOWN,
+};
+
+unsigned int DetermineChunkLength(char * chunkAsBytes) {
+    unsigned int chunkLength = 12;
+    chunkLength += htonl(*(unsigned int *)(chunkAsBytes));
+    return chunkLength;
+}
+
+chunkType DetermineChunkType(char * chunkAsBytes, chunkType &currentChunkType) {
+    unsigned char typeLetterOne = *(unsigned char *)(chunkAsBytes + 4);
+    unsigned char typeLetterTwo = *(unsigned char *)(chunkAsBytes + 5);
+    unsigned char typeLetterThree = *(unsigned char *)(chunkAsBytes + 6);
+    unsigned char typeLetterFour = *(unsigned char *)(chunkAsBytes + 7);
+    if (typeLetterOne == 'I' && typeLetterTwo == 'H' && typeLetterThree == 'D' && typeLetterFour == 'R') {
+        cout << "IHDR Chunk!" << endl;
+        currentChunkType = IHDR;
+    }
+    else if (typeLetterOne == 'I' && typeLetterTwo == 'E' && typeLetterThree == 'N' && typeLetterFour == 'D') {
+        cout << "IEND Chunk!" << endl;
+        currentChunkType = IEND;
+    }
+    else if (typeLetterOne == 'I' && typeLetterTwo == 'D' && typeLetterThree == 'A' && typeLetterFour == 'T') {
+        cout << "IDAT Chunk!" << endl;
+        currentChunkType = IDAT;
+    }
+    else if (typeLetterOne == 'P' && typeLetterTwo == 'L' && typeLetterThree == 'T' && typeLetterFour == 'E') {
+        cout << "PLTE Chunk!" << endl;
+        currentChunkType = PLTE;
+    }
+    else if (typeLetterOne == 'b' && typeLetterTwo == 'K' && typeLetterThree == 'G' && typeLetterFour == 'D') {
+        cout << "bKGD Chunk!" << endl;
+        currentChunkType = bKGD;
+    }
+    else {
+        cout << "UNKNOWN Chunk: " << typeLetterOne << typeLetterTwo << typeLetterThree << typeLetterFour << endl;
+        currentChunkType = UNKNOWN;
+    }
+    return currentChunkType;
+}
+
 
 void ParseIHDR(char * iHDRAsBytes, unsigned int &imageWidth, unsigned int &imageHeight, unsigned char &bitDepth, unsigned char &colorType, unsigned char &filterType) {
     unsigned int dataLength = htonl(*(unsigned int *)(iHDRAsBytes));
@@ -72,14 +114,30 @@ int main(int argc, char* argv[]) {
             return 0;
         }
 
+        char * chunkAsBytes = pngAsBytes + 8;
+
         unsigned int imageWidth;
         unsigned int imageHeight;
         unsigned char bitDepth;
         unsigned char colorType;
         unsigned char filterType;
-        ParseIHDR(pngAsBytes + 8, imageWidth, imageHeight, bitDepth, colorType, filterType);
-        
+        ParseIHDR(chunkAsBytes, imageWidth, imageHeight, bitDepth, colorType, filterType);
 
+        //Size of IHDR chunk is always 25 bytes
+        chunkAsBytes = chunkAsBytes + 25;
+        chunkType currentChunkType;
+        while (DetermineChunkType(chunkAsBytes, currentChunkType) != IEND) {
+            unsigned int chunkLength = DetermineChunkLength(chunkAsBytes);
+            cout << "Length: " << chunkLength << " bytes!" << endl;
+            if (currentChunkType == bKGD && (colorType == 2 || colorType == 6)) {
+                unsigned short int red = htons(*(unsigned short int *)(chunkAsBytes + 8));
+                unsigned short int green = htons(*(unsigned short int *)(chunkAsBytes + 10));
+                unsigned short int blue = htons(*(unsigned short int *)(chunkAsBytes + 12));
+                cout << "Background color to be used: rgb("<< red << "," << green << "," << blue << ")" << endl;
+            }
+
+            chunkAsBytes = chunkAsBytes + chunkLength;
+        }
         
 
         delete[] pngAsBytes;
