@@ -12,6 +12,26 @@
 
 using namespace std;
 
+
+void ParseIHDR(char * iHDRAsBytes, unsigned int &imageWidth, unsigned int &imageHeight, unsigned char &bitDepth, unsigned char &colorType, unsigned char &filterType) {
+    unsigned int dataLength = htonl(*(unsigned int *)(iHDRAsBytes));
+    unsigned char typeLetterOne = *(unsigned char *)(iHDRAsBytes + 4);
+    unsigned char typeLetterTwo = *(unsigned char *)(iHDRAsBytes + 5);
+    unsigned char typeLetterThree = *(unsigned char *)(iHDRAsBytes + 6);
+    unsigned char typeLetterFour = *(unsigned char *)(iHDRAsBytes + 7);
+    if (typeLetterOne != 'I' || typeLetterTwo != 'H' || typeLetterThree != 'D' || typeLetterFour != 'R') {
+        //throw
+        cout << "Invalid IHDR Chunk!" << endl;
+    }
+    imageWidth = htonl(*(unsigned int *)(iHDRAsBytes + 8));
+    imageHeight = htonl(*(unsigned int *)(iHDRAsBytes + 12));
+    bitDepth = *(unsigned char *)(iHDRAsBytes + 16);
+    colorType = *(unsigned char *)(iHDRAsBytes + 17);
+    filterType = *(unsigned char *)(iHDRAsBytes + 19);
+    printf("%u, %c, %c, %c, %c, %u, %u, %u, %u, %u\n", dataLength, typeLetterOne, typeLetterTwo, typeLetterThree, typeLetterFour, imageWidth, imageHeight, bitDepth, colorType, filterType);
+    return;
+}
+
 bool VerifyPNG(char * pngAsBytes) {
     unsigned int valid [8] = {137, 80, 78, 71, 13, 10, 26, 10};
     unsigned int actual [8];
@@ -51,12 +71,15 @@ int main(int argc, char* argv[]) {
             cout << "Invalid PNG File!" << endl;
             return 0;
         }
-        unsigned int width = htonl(*(unsigned int *)(pngAsBytes + 16));
-        unsigned int height = htonl(*(unsigned int *)(pngAsBytes + 20));
-        unsigned char bitDepth = *(unsigned char *)(pngAsBytes + 24);
-        unsigned char colorType = *(unsigned char *)(pngAsBytes + 25);
-        unsigned char filterType = *(unsigned char *)(pngAsBytes + 27);
-        printf("%d %d %d %d %d\n", width, height, bitDepth, colorType, filterType);
+
+        unsigned int imageWidth;
+        unsigned int imageHeight;
+        unsigned char bitDepth;
+        unsigned char colorType;
+        unsigned char filterType;
+        ParseIHDR(pngAsBytes + 8, imageWidth, imageHeight, bitDepth, colorType, filterType);
+        
+
         
 
         delete[] pngAsBytes;
