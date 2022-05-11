@@ -22,33 +22,35 @@ unsigned int DetermineChunkLength(char * chunkAsBytes) {
     return chunkLength;
 }
 
-chunkType DetermineChunkType(char * chunkAsBytes, chunkType &currentChunkType) {
-    unsigned char typeLetterOne = *(unsigned char *)(chunkAsBytes + 4);
-    unsigned char typeLetterTwo = *(unsigned char *)(chunkAsBytes + 5);
-    unsigned char typeLetterThree = *(unsigned char *)(chunkAsBytes + 6);
-    unsigned char typeLetterFour = *(unsigned char *)(chunkAsBytes + 7);
-    if (typeLetterOne == 'I' && typeLetterTwo == 'H' && typeLetterThree == 'D' && typeLetterFour == 'R') {
+chunkType DetermineChunkType(char * chunkAsBytes) {
+    chunkType currentChunkType;
+    string sChunkType;
+    sChunkType.push_back(*(unsigned char *)(chunkAsBytes + 4));
+    sChunkType.push_back(*(unsigned char *)(chunkAsBytes + 5));
+    sChunkType.push_back(*(unsigned char *)(chunkAsBytes + 6));
+    sChunkType.push_back(*(unsigned char *)(chunkAsBytes + 7));
+    if (sChunkType == "IHDR") {
         cout << "IHDR Chunk!" << endl;
         currentChunkType = IHDR;
     }
-    else if (typeLetterOne == 'I' && typeLetterTwo == 'E' && typeLetterThree == 'N' && typeLetterFour == 'D') {
+    else if (sChunkType == "IEND") {
         cout << "IEND Chunk!" << endl;
         currentChunkType = IEND;
     }
-    else if (typeLetterOne == 'I' && typeLetterTwo == 'D' && typeLetterThree == 'A' && typeLetterFour == 'T') {
+    else if (sChunkType == "IDAT") {
         cout << "IDAT Chunk!" << endl;
         currentChunkType = IDAT;
     }
-    else if (typeLetterOne == 'P' && typeLetterTwo == 'L' && typeLetterThree == 'T' && typeLetterFour == 'E') {
+    else if (sChunkType == "PLTE") {
         cout << "PLTE Chunk!" << endl;
         currentChunkType = PLTE;
     }
-    else if (typeLetterOne == 'b' && typeLetterTwo == 'K' && typeLetterThree == 'G' && typeLetterFour == 'D') {
+    else if (sChunkType == "bKGD") {
         cout << "bKGD Chunk!" << endl;
         currentChunkType = bKGD;
     }
     else {
-        cout << "UNKNOWN Chunk: " << typeLetterOne << typeLetterTwo << typeLetterThree << typeLetterFour << endl;
+        cout << "UNKNOWN Chunk: " << sChunkType << endl;
         currentChunkType = UNKNOWN;
     }
     return currentChunkType;
@@ -56,25 +58,21 @@ chunkType DetermineChunkType(char * chunkAsBytes, chunkType &currentChunkType) {
 
 
 void ParseIHDR(char * iHDRAsBytes, unsigned int &imageWidth, unsigned int &imageHeight, unsigned char &bitDepth, unsigned char &colorType, unsigned char &filterType) {
-    unsigned int dataLength = htonl(*(unsigned int *)(iHDRAsBytes));
-    unsigned char typeLetterOne = *(unsigned char *)(iHDRAsBytes + 4);
-    unsigned char typeLetterTwo = *(unsigned char *)(iHDRAsBytes + 5);
-    unsigned char typeLetterThree = *(unsigned char *)(iHDRAsBytes + 6);
-    unsigned char typeLetterFour = *(unsigned char *)(iHDRAsBytes + 7);
-    if (typeLetterOne != 'I' || typeLetterTwo != 'H' || typeLetterThree != 'D' || typeLetterFour != 'R') {
-        //throw
-        cout << "Invalid IHDR Chunk!" << endl;
+    //unsigned int dataLength = htonl(*(unsigned int *)(iHDRAsBytes));
+    if (DetermineChunkType(iHDRAsBytes) != IHDR) {
+        throw std::invalid_argument("The IHDR chunk is not the first chunk in the file!");
     }
     imageWidth = htonl(*(unsigned int *)(iHDRAsBytes + 8));
     imageHeight = htonl(*(unsigned int *)(iHDRAsBytes + 12));
     bitDepth = *(unsigned char *)(iHDRAsBytes + 16);
     colorType = *(unsigned char *)(iHDRAsBytes + 17);
     filterType = *(unsigned char *)(iHDRAsBytes + 19);
-    printf("%u, %c, %c, %c, %c, %u, %u, %u, %u, %u\n", dataLength, typeLetterOne, typeLetterTwo, typeLetterThree, typeLetterFour, imageWidth, imageHeight, bitDepth, colorType, filterType);
-    return;
+    printf("\tImage Width: %u pixels | Image Height: %u pixels\n", imageWidth, imageHeight);
+    printf("\tbitDepth: %u | colorType: %u | filterType: %u\n", bitDepth, colorType, filterType);
 }
 
-bool VerifyPNG(char * pngAsBytes) {
+void VerifyPNG(char * pngAsBytes) {
+    //First 8 bytes of a png file are always those in valid array
     unsigned int valid [8] = {137, 80, 78, 71, 13, 10, 26, 10};
     unsigned int actual [8];
     for (int i = 0; i < 8; ++i) {
@@ -82,11 +80,9 @@ bool VerifyPNG(char * pngAsBytes) {
     }
     for (int i = 0; i < 8; ++i) {
         if (valid[i] != actual[i]) {
-            return false;
+            throw std::invalid_argument("Invalid PNG file! First 8 bytes are not correct!");
         }
     }
-
-    return true;
 }
 
 int main(int argc, char* argv[]) {
@@ -107,38 +103,42 @@ int main(int argc, char* argv[]) {
             return 0;
         }
         is.close();
+        try {
+            //pngAsBytes contains the entire file...
+            VerifyPNG(pngAsBytes);
 
-        // ...pngAsBytes contains the entire file...
-        if (!VerifyPNG(pngAsBytes)) {
-            cout << "Invalid PNG File!" << endl;
-            return 0;
-        }
+            char * chunkAsBytes = pngAsBytes + 8;
 
-        char * chunkAsBytes = pngAsBytes + 8;
+            unsigned int imageWidth;
+            unsigned int imageHeight;
+            unsigned char bitDepth;
+            unsigned char colorType;
+            unsigned char filterType;
+            ParseIHDR(chunkAsBytes, imageWidth, imageHeight, bitDepth, colorType, filterType);
 
-        unsigned int imageWidth;
-        unsigned int imageHeight;
-        unsigned char bitDepth;
-        unsigned char colorType;
-        unsigned char filterType;
-        ParseIHDR(chunkAsBytes, imageWidth, imageHeight, bitDepth, colorType, filterType);
+            //Size of IHDR chunk is always 25 bytes. Locate next chunk
+            chunkAsBytes = chunkAsBytes + 25;
+            
+            chunkType currentChunkType = DetermineChunkType(chunkAsBytes);
+            while (currentChunkType != IEND) {
+                unsigned int chunkLength = DetermineChunkLength(chunkAsBytes);
+                cout << "Length: " << chunkLength << " bytes!" << endl;
+                if (currentChunkType == bKGD && (colorType == 2 || colorType == 6)) {
+                    unsigned short int red = htons(*(unsigned short int *)(chunkAsBytes + 8));
+                    unsigned short int green = htons(*(unsigned short int *)(chunkAsBytes + 10));
+                    unsigned short int blue = htons(*(unsigned short int *)(chunkAsBytes + 12));
+                    cout << "Background color to be used: rgb("<< red << "," << green << "," << blue << ")" << endl;
+                }
 
-        //Size of IHDR chunk is always 25 bytes
-        chunkAsBytes = chunkAsBytes + 25;
-        chunkType currentChunkType;
-        while (DetermineChunkType(chunkAsBytes, currentChunkType) != IEND) {
-            unsigned int chunkLength = DetermineChunkLength(chunkAsBytes);
-            cout << "Length: " << chunkLength << " bytes!" << endl;
-            if (currentChunkType == bKGD && (colorType == 2 || colorType == 6)) {
-                unsigned short int red = htons(*(unsigned short int *)(chunkAsBytes + 8));
-                unsigned short int green = htons(*(unsigned short int *)(chunkAsBytes + 10));
-                unsigned short int blue = htons(*(unsigned short int *)(chunkAsBytes + 12));
-                cout << "Background color to be used: rgb("<< red << "," << green << "," << blue << ")" << endl;
+                chunkAsBytes = chunkAsBytes + chunkLength;
+                currentChunkType = DetermineChunkType(chunkAsBytes);
             }
 
-            chunkAsBytes = chunkAsBytes + chunkLength;
         }
-        
+        catch(exception& e) {
+            cout << endl << e.what() << endl;
+            return 0;
+        }
 
         delete[] pngAsBytes;
     }
