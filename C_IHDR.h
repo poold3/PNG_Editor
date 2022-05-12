@@ -17,6 +17,7 @@ class C_IHDR {
         unsigned char colorType;
         unsigned char compressionType;
         unsigned char filterType;
+        unsigned char interlaceType;
 
 	public:
         C_IHDR (char * chunkAsBytes) {
@@ -29,6 +30,7 @@ class C_IHDR {
             this->colorType = *(unsigned char *)(chunkAsBytes + 17);
             this->compressionType = *(unsigned char *)(chunkAsBytes + 18);
             this->filterType = *(unsigned char *)(chunkAsBytes + 19);
+            this->interlaceType = *(unsigned char *)(chunkAsBytes + 20);
         }
         C_IHDR (char * chunkAsBytes, unsigned int chunkLength) {
             this->chunkAsBytes = chunkAsBytes;
@@ -40,6 +42,7 @@ class C_IHDR {
             this->colorType = *(unsigned char *)(chunkAsBytes + 17);
             this->compressionType = *(unsigned char *)(chunkAsBytes + 18);
             this->filterType = *(unsigned char *)(chunkAsBytes + 19);
+            this->interlaceType = *(unsigned char *)(chunkAsBytes + 20);
         }
         C_IHDR () {}
 
@@ -77,6 +80,10 @@ class C_IHDR {
 
         unsigned char GetFilterType () {
             return filterType;
+        }
+
+        unsigned char GetInterlaceType () {
+            return interlaceType;
         }
 
 };

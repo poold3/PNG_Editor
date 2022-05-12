@@ -37,5 +37,9 @@ class C_IDAT {
             return dataLength;
         }
 
+        char * GetDataAsBytes () {
+            return chunkAsBytes + 8;
+        }
+
 };
 #endif

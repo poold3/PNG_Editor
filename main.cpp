@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <stdio.h>
+#include <algorithm>
 #ifdef _WIN32
 #include <winsock.h>
 #else
@@ -157,7 +158,6 @@ int main(int argc, char* argv[]) {
             }
 
             C_IHDR ihdr(chunkAsBytes);
-            printf("%u\n", ihdr.GetCompressionType());
             vector<C_IDAT> idats;
             C_bKGD bkgd;
 
@@ -183,6 +183,24 @@ int main(int argc, char* argv[]) {
                 currentChunkType = DetermineChunkType(chunkAsBytes);
             }
 
+            vector<char> imageData;
+
+            //For every IDAT chunk, take the data and make a new array. Then copy it to a master array
+            for (auto& idat : idats) {
+                unsigned int dataLength = idat.GetDataLength();
+                char * data = idat.GetDataAsBytes();
+                for (unsigned int i = 0; i < dataLength; ++i) {
+                    imageData.push_back(*(data + i));
+                }
+            }
+            char realImageData [imageData.size()];
+            copy(imageData.begin(), imageData.end(), realImageData);
+
+            char * imageDataAsBytes = realImageData;
+
+            printf("%x\n", *(unsigned char *)(imageDataAsBytes + 1));
+
+            
         }
         catch(exception& e) {
             cout << endl << e.what() << endl;
