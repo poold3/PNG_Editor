@@ -157,6 +157,7 @@ int main(int argc, char* argv[]) {
             }
 
             C_IHDR ihdr(chunkAsBytes);
+            printf("%u\n", ihdr.GetCompressionType());
             vector<C_IDAT> idats;
             C_bKGD bkgd;
 

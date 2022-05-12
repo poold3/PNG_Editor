@@ -15,6 +15,7 @@ class C_IHDR {
         unsigned int imageHeight;
         unsigned char bitDepth;
         unsigned char colorType;
+        unsigned char compressionType;
         unsigned char filterType;
 
 	public:
@@ -26,6 +27,7 @@ class C_IHDR {
             this->imageHeight = htonl(*(unsigned int *)(chunkAsBytes + 12));
             this->bitDepth = *(unsigned char *)(chunkAsBytes + 16);
             this->colorType = *(unsigned char *)(chunkAsBytes + 17);
+            this->compressionType = *(unsigned char *)(chunkAsBytes + 18);
             this->filterType = *(unsigned char *)(chunkAsBytes + 19);
         }
         C_IHDR (char * chunkAsBytes, unsigned int chunkLength) {
@@ -36,6 +38,7 @@ class C_IHDR {
             this->imageHeight = htonl(*(unsigned int *)(chunkAsBytes + 12));
             this->bitDepth = *(unsigned char *)(chunkAsBytes + 16);
             this->colorType = *(unsigned char *)(chunkAsBytes + 17);
+            this->compressionType = *(unsigned char *)(chunkAsBytes + 18);
             this->filterType = *(unsigned char *)(chunkAsBytes + 19);
         }
         C_IHDR () {}
@@ -66,6 +69,10 @@ class C_IHDR {
 
         unsigned char GetColorType () {
             return colorType;
+        }
+
+        unsigned char GetCompressionType () {
+            return compressionType;
         }
 
         unsigned char GetFilterType () {
